@@ -1,0 +1,22 @@
+[client]
+toolbarMode = "minimal"
+showErrorDetails = "none"
+showSidebarNavigation = false
+
+[browser]
+gatherUsageStats = false
+
+[server]
+runOnSave = false
+enableStaticServing = true  # serves ./static (illustrations) at app/static/
+
+[theme]
+base = "light"  # light only, even when the phone is in dark mode
+font = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+baseRadius = "medium"
+showWidgetBorder = false
+primaryColor = "#A8372A"
+backgroundColor = "#FBF7F0"
+secondaryBackgroundColor = "#F4EDE3"
+textColor = "#2A2421"
+borderColor = "#E8DFD2"

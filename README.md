@@ -40,6 +40,9 @@ static/motifs/                 illustrations (used with permission), served by S
   green-tinted line (`prive` = `oui` in the sheet).
 - Ideas and wishes can have several links (one per line in the form; stored one per
   line in the `lien` cell).
+- Wishes have a 💬 button: comments on a wish are visible to everyone,
+  including the person who made the wish (they can reply). Comments on ideas
+  stay hidden from the recipient. Both live in the `commentaires` tab.
 - Each idea has a ♥ and a 👎 button (when opened). One vote per person and
   idea: tap again to remove it, tap the other to switch. Totals show on the
   collapsed row, voters' names when opened.

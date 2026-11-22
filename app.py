@@ -209,6 +209,17 @@ class SheetsBackend:
             self._call(self.sh.values_batch_update, {"valueInputOption": "RAW", "data": [
                 {"range": f"'notes'!B{row}:D{row}", "values": [[texte, par, le]]}]})
 
+    def delete_wish(self, wid: str):
+        resp = self._call(self.sh.values_batch_get, ["'souhaits'!A:A", "'commentaires'!A:B"])
+        vrs = resp.get("valueRanges", [])
+        ws_ = vrs[0].get("values", []) if vrs else []
+        coms = vrs[1].get("values", []) if len(vrs) > 1 else []
+        rows_w = [i + 1 for i, r in enumerate(ws_) if i > 0 and r and r[0] == wid]
+        rows_c = [i + 1 for i, r in enumerate(coms) if i > 0 and len(r) > 1 and r[1] == wid]
+        reqs = self._delete_requests("souhaits", rows_w) + self._delete_requests("commentaires", rows_c)
+        if reqs:
+            self._call(self.sh.batch_update, {"requests": reqs})
+
     def set_vote(self, iid: str, person: str, val: str, le: str):
         """Un vote par personne et par idée ; val vide = retirer le vote."""
         resp = self._call(self.sh.values_batch_get, ["'votes'!A:B"])
@@ -302,6 +313,12 @@ class LocalBackend:
 
     def delete_comment(self, cid):
         self.delete_row("commentaires", cid)
+
+    def delete_wish(self, wid):
+        def f(db):
+            db["souhaits"] = [w for w in db.get("souhaits", []) if w["id"] != wid]
+            db["commentaires"] = [c for c in db["commentaires"] if c["idee_id"] != wid]
+        self._write(f)
 
     def set_vote(self, iid, person, val, le):
         def f(db):
@@ -538,9 +555,11 @@ def act_delete_wish(wid):
     w = next((w for w in ss.db.get("souhaits", []) if w["id"] == wid), None)
     if not w:
         return
+    coms = [c for c in ss.db["commentaires"] if c["idee_id"] == wid]
     ss.db["souhaits"] = [x for x in ss.db["souhaits"] if x["id"] != wid]
-    submit("delete_row", "souhaits", wid)
-    _set_undo(f"« {w['nom']} » supprimé", [("souhaits", w)])
+    ss.db["commentaires"] = [c for c in ss.db["commentaires"] if c["idee_id"] != wid]
+    submit("delete_wish", wid)
+    _set_undo(f"« {w['nom']} » supprimé", [("souhaits", w)] + [("commentaires", c) for c in coms])
 
 
 def act_undo():
@@ -678,6 +697,11 @@ html { scroll-behavior: smooth; }
 .wish .px { font-size: .9rem; color: var(--muted); white-space: nowrap; }
 .wish a.lnk { min-height: 24px; line-height: 24px; font-size: .85rem; }
 .wdone { font-size: .75rem; color: var(--muted); white-space: nowrap; }
+[class*="st-key-wc_"] button { min-height: 44px; min-width: 40px; padding: 0 4px; color: var(--muted) !important; }
+[class*="st-key-wc_"] button p { font-size: .85rem; }
+[class*="st-key-wc_"][class*="_z"] button [data-testid="stMarkdownContainer"] {
+  position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+[class*="st-key-det_w_"] { padding: 2px 0 12px 0; }
 [class*="st-key-w2i_"] button { min-height: 44px; padding: 0 4px; color: var(--accent) !important; }
 [class*="st-key-w2i_"] button p { font-size: .85rem; }
 [class*="st-key-icoedit_"] button, [class*="st-key-icodel_"] button { min-height: 44px; min-width: 36px; padding: 0; color: var(--muted) !important; }
@@ -1014,6 +1038,35 @@ def _wish_html(w, extra=""):
             f'{link}{extra}</div>' + (f'<div class="px">{esc(prix)}</div>' if prix else "") + "</div>")
 
 
+def wish_comment_button(w, db, k):
+    """Bouton 💬 (avec le nombre de commentaires) qui déplie la discussion du souhait."""
+    n = sum(c["idee_id"] == w["id"] for c in db["commentaires"])
+    st.button(str(n) if n else "Commenter", key=f"wc_{k}" + ("" if n else "_z"), type="tertiary",
+              icon=":material/chat_bubble:", on_click=act_open, args=(k,))
+
+
+def render_wish_comments(w, db, user, k):
+    """Commentaires d'un souhait : visibles par tous, y compris la personne qui l'a souhaité."""
+    wid = w["id"]
+    with st.container(key=f"det_{k}"):
+        coms = sorted((c for c in db["commentaires"] if c["idee_id"] == wid),
+                      key=lambda c: c.get("cree_le", ""))
+        for c in coms:
+            with st.container(horizontal=True, wrap=False, gap="small", key=f"crow_{c['id']}_{k}"):
+                st.markdown(f'<div class="com"><span class="au">{esc(c["auteur"])} :</span> '
+                            f'{esc(c["texte"])}</div>', unsafe_allow_html=True)
+                st.button("Supprimer le commentaire", key=f"delc_{c['id']}_{k}", type="tertiary",
+                          icon=":material/close:", on_click=act_del_comment, args=(c["id"],))
+        mine = w["personne"] == user
+        ph = "Répondre…" if mine else f"Commenter (visible par {w['personne']})…"
+        with st.form(f"cf_{k}", clear_on_submit=True, border=False):
+            with st.container(horizontal=True, wrap=False, gap="small", key=f"cbar_{k}",
+                              vertical_alignment="center"):
+                st.text_input("Commentaire", key=f"ct_{k}", placeholder=ph, label_visibility="collapsed")
+                st.form_submit_button("Envoyer", type="tertiary",
+                                      on_click=act_add_comment, args=(wid, user, f"ct_{k}"))
+
+
 def render_my_wishes(user, db):
     mine = sorted((w for w in db.get("souhaits", []) if w["personne"] == user),
                   key=lambda w: w.get("cree_le", ""))
@@ -1029,6 +1082,9 @@ def render_my_wishes(user, db):
                     dlg_wish_edit(w["id"])
                 st.button("Supprimer le souhait", key=f"icodel_{w['id']}", type="tertiary",
                           icon=":material/close:", on_click=act_delete_wish, args=(w["id"],))
+                wish_comment_button(w, db, f"w_{w['id']}_m")
+            if ss.open == f"w_{w['id']}_m":
+                render_wish_comments(w, db, user, f"w_{w['id']}_m")
         if st.button("Ajouter un souhait", key="add_wish", type="tertiary", icon=":material/add:"):
             dlg_wish_add(user)
 
@@ -1065,6 +1121,9 @@ def render_tile(i, dest, db, user, anchor_id):
                         st.button("idée", key=f"w2i_{w['id']}", type="tertiary", icon=":material/add:",
                                   help="Ajouter aux idées (pour suivre l'achat)",
                                   on_click=act_wish_to_idea, args=(w["id"], user))
+                    wish_comment_button(w, db, f"w_{w['id']}_t{i}")
+                if ss.open == f"w_{w['id']}_t{i}":
+                    render_wish_comments(w, db, user, f"w_{w['id']}_t{i}")
             st.markdown('<div class="lbl" style="margin:12px 0 2px">Idées</div>', unsafe_allow_html=True)
         with st.container(key=f"liste_{i}"):
             for it in items:

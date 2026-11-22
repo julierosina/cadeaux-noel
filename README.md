@@ -83,7 +83,7 @@ the `\n` sequences exactly as in the JSON file.
 
 Then create the tabs and add the family:
 ```bash
-python init_sheet.py --names "Laurent, Marie-Aimée, Chloé, Mathilde, Julie, Bruno, Victoire, Maria, Irène, Georges, Christine"
+python init_sheet.py --names "Alice, Bob, Camille, David"
 ```
 This creates `personnes` (`nom`), `idees` (`id, destinataire, nom, prix,
 statut, suggere_par, cree_le, lien`), `commentaires` (`id, idee_id, auteur, texte,

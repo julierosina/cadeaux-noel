@@ -668,6 +668,9 @@ html { scroll-behavior: smooth; }
 /* Mes souhaits */
 .st-key-mine { background: var(--paper); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 18px;
   padding: 14px 16px 10px; gap: 0 !important; }
+.st-key-mine { position: relative; box-shadow: 0 3px 0 #efe6d8; }
+.st-key-mine::before { content: ""; position: absolute; inset: 6px; border: 1.5px dashed #e4b3aa;
+  border-radius: 13px; pointer-events: none; }  /* « couture » autour de mes souhaits */
 [class*="st-key-wrow_"] { flex-wrap: nowrap !important; border-bottom: .5px solid var(--hair); }
 [class*="st-key-wrow_"] > div:first-child { flex: 1 1 auto; min-width: 0; }
 .wish { display:flex; align-items:center; justify-content:space-between; gap: 12px; min-height: 48px; padding: 6px 0; }
@@ -1146,6 +1149,8 @@ def render_details(it, db, user, k):
 # Main
 # --------------------------------------------------------------------------- #
 st.markdown(CSS, unsafe_allow_html=True)
+
+
 check_access()
 db = get_db()
 people = db["personnes"]

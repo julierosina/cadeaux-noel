@@ -725,6 +725,7 @@ html { scroll-behavior: smooth; }
 [class*="st-key-vup_"] button p, [class*="st-key-vdn_"] button p { font-size: .9rem; }
 .vwho { font-size: .78rem; color: var(--muted); padding-left: 4px; overflow-wrap: anywhere; }
 .row .lk { color: var(--muted); font-size: .85em; }
+.lnks { display: flex; flex-wrap: wrap; column-gap: 14px; }
 a.lnk { display: inline-block; min-height: 32px; line-height: 32px; color: var(--accent) !important;
   text-decoration: none; font-size: .95rem; overflow-wrap: anywhere; }
 
@@ -776,6 +777,25 @@ def norm_url(u: str) -> str:
     return u
 
 
+def links_of(v) -> list[str]:
+    """Plusieurs liens dans la colonne « lien », un par ligne (ou séparés par des espaces)."""
+    out = []
+    for part in str(v or "").split():
+        u = norm_url(part)
+        if u and u not in out:
+            out.append(u)
+    return out
+
+
+def join_links(v) -> str:
+    return "\n".join(links_of(v))
+
+
+def links_html(v, cls="lnk") -> str:
+    return "".join(f'<a class="{cls}" href="{esc(u)}" target="_blank" rel="noopener noreferrer">'
+                   f'{esc(url_label(u))} ↗</a>' for u in links_of(v))
+
+
 def url_label(u: str) -> str:
     host = urlparse(u).netloc.lower()
     return host[4:] if host.startswith("www.") else (host or u)
@@ -807,7 +827,8 @@ def _idea_fields(user, dest_default, it=None):
     others = [p for p in ss.db["personnes"] if p != user]
     nom = st.text_input("Nom", value=it.get("nom", ""), placeholder="ex. Un livre de cuisine")
     prix = st.text_input("Prix (optionnel)", value=it.get("prix", ""), placeholder="ex. 25")
-    lien = st.text_input("Lien (optionnel)", value=it.get("lien", ""), placeholder="https://…")
+    lien = st.text_area("Liens (optionnel, un par ligne)", value=join_links(it.get("lien", "")),
+                        placeholder="https://…", height=80)
     pour = st.multiselect("Pour", others, default=[d for d in dest_default if d in others],
                           help="Plusieurs personnes = cadeau commun (ex. un couple)",
                           placeholder="Choisir…")
@@ -834,7 +855,7 @@ def dlg_add(dest, user):
     if ok and _check_idea(nom, pour):
         rec = {"id": new_id(), "destinataire": SEP.join(pour), "nom": nom.strip(), "prix": prix.strip(),
                "statut": IDEE, "suggere_par": user, "cree_le": now_iso(),
-               "lien": norm_url(lien), "prive": "oui" if secret else ""}
+               "lien": join_links(lien), "prive": "oui" if secret else ""}
         ss.db["idees"].append(rec)
         submit("append", "idees", rec)
         st.rerun()
@@ -849,7 +870,7 @@ def dlg_edit(iid, user):
         nom, prix, lien, pour, secret = _idea_fields(user, dests(it), it)
         ok = st.form_submit_button("Enregistrer", type="primary", width="stretch")
     if ok and _check_idea(nom, pour):
-        fields = {"nom": nom.strip(), "prix": prix.strip(), "lien": norm_url(lien),
+        fields = {"nom": nom.strip(), "prix": prix.strip(), "lien": join_links(lien),
                   "destinataire": SEP.join(pour), "prive": "oui" if secret else ""}
         it.update(fields)
         submit("update", "idees", iid, fields)
@@ -860,12 +881,13 @@ def _wish_form(key, w=None):
     with st.form(key, border=False):
         nom = st.text_input("Nom", value=(w or {}).get("nom", ""), placeholder="ex. Un pull en laine")
         prix = st.text_input("Prix (optionnel)", value=(w or {}).get("prix", ""), placeholder="ex. 40")
-        lien = st.text_input("Lien (optionnel)", value=(w or {}).get("lien", ""), placeholder="https://…")
+        lien = st.text_area("Liens (optionnel, un par ligne)", value=join_links((w or {}).get("lien", "")),
+                            placeholder="https://…", height=80)
         ok = st.form_submit_button("Enregistrer" if w else "Ajouter", type="primary", width="stretch")
     if ok and not nom.strip():
         st.error("Le nom est obligatoire.")
         return None
-    return (nom.strip(), prix.strip(), norm_url(lien)) if ok else None
+    return (nom.strip(), prix.strip(), join_links(lien)) if ok else None
 
 
 @st.dialog("Ajouter un souhait")
@@ -962,9 +984,8 @@ def render_undo():
 
 def _wish_html(w, extra=""):
     prix = fmt_prix(w.get("prix", ""))
-    lien = w.get("lien", "")
-    link = (f' <a class="lnk" href="{esc(lien)}" target="_blank" rel="noopener noreferrer">'
-            f'{esc(url_label(lien))} ↗</a>') if lien else ""
+    links = links_html(w.get("lien", ""))
+    link = f'<div class="lnks">{links}</div>' if links else ""
     return (f'<div class="wish"><div><div class="nm">{esc(w["nom"])}</div>'
             f'{link}{extra}</div>' + (f'<div class="px">{esc(prix)}</div>' if prix else "") + "</div>")
 
@@ -1008,11 +1029,11 @@ def render_tile(i, dest, db, user, anchor_id):
         if wishes:
             st.markdown('<div class="lbl" style="margin:4px 0 2px">Ses souhaits</div>',
                         unsafe_allow_html=True)
-            taken = {it["nom"].casefold() for it in items} | {it.get("lien") for it in items if it.get("lien")}
+            taken = {it["nom"].casefold() for it in items} | {u for it in items for u in links_of(it.get("lien"))}
             for w in wishes:
                 with st.container(horizontal=True, wrap=False, gap="small", vertical_alignment="center",
                                   key=f"wrow_{w['id']}"):
-                    already = w["nom"].casefold() in taken or (w.get("lien") and w["lien"] in taken)
+                    already = w["nom"].casefold() in taken or any(u in taken for u in links_of(w.get("lien")))
                     st.markdown(_wish_html(w), unsafe_allow_html=True)
                     if already:
                         st.markdown('<div class="wdone">dans les idées</div>', unsafe_allow_html=True)
@@ -1117,10 +1138,9 @@ def render_votes(it, db, user, k):
 def render_details(it, db, user, k):
     iid = it["id"]
     with st.container(key=f"det_{k}"):
-        lien = it.get("lien", "")
-        if lien:
-            st.markdown(f'<a class="lnk" href="{esc(lien)}" target="_blank" rel="noopener noreferrer">'
-                        f'{esc(url_label(lien))} ↗</a>', unsafe_allow_html=True)
+        links = links_html(it.get("lien", ""))
+        if links:
+            st.markdown(f'<div class="lnks">{links}</div>', unsafe_allow_html=True)
         render_votes(it, db, user, k)
         st.markdown('<div class="lbl">Commentaires</div>', unsafe_allow_html=True)
         coms = sorted((c for c in db["commentaires"] if c["idee_id"] == iid),

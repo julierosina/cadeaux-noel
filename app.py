@@ -725,7 +725,8 @@ html { scroll-behavior: smooth; }
 [class*="st-key-vup_"] button p, [class*="st-key-vdn_"] button p { font-size: .9rem; }
 .vwho { font-size: .78rem; color: var(--muted); padding-left: 4px; overflow-wrap: anywhere; }
 .row .lk { color: var(--muted); font-size: .85em; }
-.lnks { display: flex; flex-wrap: wrap; column-gap: 14px; }
+.lnks { display: flex; flex-wrap: wrap; column-gap: 14px; align-items: baseline; }
+.lnote { font-size: .85rem; color: var(--muted); font-style: italic; overflow-wrap: anywhere; }
 a.lnk { display: inline-block; min-height: 32px; line-height: 32px; color: var(--accent) !important;
   text-decoration: none; font-size: .95rem; overflow-wrap: anywhere; }
 
@@ -777,23 +778,46 @@ def norm_url(u: str) -> str:
     return u
 
 
+# Un « mot » n'est un lien que s'il ressemble à une adresse web (domaine avec .fr, .com…).
+_URL_RE = re.compile(r"^(?:https?://)?(?:[\w-]+\.)+[a-z]{2,}(?::\d+)?(?:[/?#]\S*)?$", re.I)
+
+
+def parse_links(v) -> tuple[list[str], str]:
+    """Contenu de la case « lien » -> (liens, texte libre restant)."""
+    urls, words = [], []
+    for tok in str(v or "").split():
+        if _URL_RE.match(tok):
+            u = norm_url(tok)
+            if u not in urls:
+                urls.append(u)
+        else:
+            # Répare aussi les mots enregistrés par erreur comme « https://mot ».
+            words.append(re.sub(r"^https?://", "", tok, flags=re.I))
+    return urls, " ".join(w for w in words if w)
+
+
 def links_of(v) -> list[str]:
-    """Plusieurs liens dans la colonne « lien », un par ligne (ou séparés par des espaces)."""
-    out = []
-    for part in str(v or "").split():
-        u = norm_url(part)
-        if u and u not in out:
-            out.append(u)
-    return out
+    return parse_links(v)[0]
+
+
+def links_field_value(v) -> str:
+    """Texte proposé dans le formulaire de modification."""
+    urls, text = parse_links(v)
+    return "\n".join(urls + ([text] if text else []))
 
 
 def join_links(v) -> str:
-    return "\n".join(links_of(v))
+    """À l'enregistrement : on garde ce qui a été tapé (lignes nettoyées), sans rien transformer."""
+    return "\n".join(line.strip() for line in str(v or "").splitlines() if line.strip())
 
 
 def links_html(v, cls="lnk") -> str:
-    return "".join(f'<a class="{cls}" href="{esc(u)}" target="_blank" rel="noopener noreferrer">'
-                   f'{esc(url_label(u))} ↗</a>' for u in links_of(v))
+    urls, text = parse_links(v)
+    out = "".join(f'<a class="{cls}" href="{esc(u)}" target="_blank" rel="noopener noreferrer">'
+                  f'{esc(url_label(u))} ↗</a>' for u in urls)
+    if text:
+        out += f'<span class="lnote">{esc(text)}</span>'
+    return out
 
 
 def url_label(u: str) -> str:
@@ -827,7 +851,7 @@ def _idea_fields(user, dest_default, it=None):
     others = [p for p in ss.db["personnes"] if p != user]
     nom = st.text_input("Nom", value=it.get("nom", ""), placeholder="ex. Un livre de cuisine")
     prix = st.text_input("Prix (optionnel)", value=it.get("prix", ""), placeholder="ex. 25")
-    lien = st.text_area("Liens (optionnel, un par ligne)", value=join_links(it.get("lien", "")),
+    lien = st.text_area("Liens (optionnel, un par ligne)", value=links_field_value(it.get("lien", "")),
                         placeholder="https://…", height=80)
     pour = st.multiselect("Pour", others, default=[d for d in dest_default if d in others],
                           help="Plusieurs personnes = cadeau commun (ex. un couple)",
@@ -881,7 +905,7 @@ def _wish_form(key, w=None):
     with st.form(key, border=False):
         nom = st.text_input("Nom", value=(w or {}).get("nom", ""), placeholder="ex. Un pull en laine")
         prix = st.text_input("Prix (optionnel)", value=(w or {}).get("prix", ""), placeholder="ex. 40")
-        lien = st.text_area("Liens (optionnel, un par ligne)", value=join_links((w or {}).get("lien", "")),
+        lien = st.text_area("Liens (optionnel, un par ligne)", value=links_field_value((w or {}).get("lien", "")),
                             placeholder="https://…", height=80)
         ok = st.form_submit_button("Enregistrer" if w else "Ajouter", type="primary", width="stretch")
     if ok and not nom.strip():
@@ -1094,7 +1118,7 @@ def render_item(it, db, user, ti, dest):
                 st.markdown(
                     f'<div class="row{" done" if bought else ""}"><div>'
                     f'<div class="nm">{esc(it["nom"])}'
-                    + (' <span class="lk" title="lien">↗</span>' if it.get("lien") else "")
+                    + (' <span class="lk" title="lien">↗</span>' if links_of(it.get("lien")) else "")
                     + '</div>'
                     f'<div class="by">{" · ".join(tags)}</div></div>'
                     + (f'<div class="px">{esc(prix)}</div>' if prix else "")

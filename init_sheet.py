@@ -1,6 +1,6 @@
 """Initialise the Google Sheet (or the local test file) for the gift app.
 
-Creates the five tabs `personnes`, `idees`, `commentaires`, `notes`, `souhaits` with their headers
+Creates the six tabs `personnes`, `idees`, `commentaires`, `notes`, `souhaits`, `votes` with their headers
 (if missing) and adds the family names to `personnes`.
 Existing data is never deleted: names already present are skipped.
 
@@ -32,6 +32,7 @@ HEADERS = {
     "commentaires": ["id", "idee_id", "auteur", "texte", "cree_le"],
     "notes": ["destinataire", "texte", "modifie_par", "modifie_le"],
     "souhaits": ["id", "personne", "nom", "prix", "lien", "cree_le"],
+    "votes": ["idee_id", "personne", "vote", "modifie_le"],
 }
 DEFAULT_TABS = {"Sheet1", "Feuille 1", "Feuille1", "Hoja 1", "Tabelle1"}
 
@@ -104,7 +105,7 @@ def init_google(args, names):
 def init_local(args, names):
     path = Path(args.local_path)
     db = (json.loads(path.read_text(encoding="utf-8")) if path.exists()
-          else {"personnes": [], "idees": [], "commentaires": [], "notes": [], "souhaits": []})
+          else {"personnes": [], "idees": [], "commentaires": [], "notes": [], "souhaits": [], "votes": []})
     db.setdefault("notes", [])
     db.setdefault("souhaits", [])
     for n in names:

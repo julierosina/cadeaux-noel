@@ -38,9 +38,12 @@ static/motifs/                 illustrations (used with permission), served by S
   `destinataire` then reads `Bruno + Victoire`.
 - An idea can be marked secret: only the person who added it sees it, as a
   green-tinted line (`prive` = `oui` in the sheet).
+- Each idea has a ♥ and a 👎 button (when opened). One vote per person and
+  idea: tap again to remove it, tap the other to switch. Totals show on the
+  collapsed row, voters' names when opened.
 - Deleting an idea or a wish is immediate; an "Annuler" bar appears for about
   12 seconds to bring it back.
-- Reads: one API call fetches all five tabs, cached for 25 s and shared by all
+- Reads: one API call fetches all six tabs, cached for 25 s and shared by all
   visitors. Writes: the change is applied to your screen immediately, then sent
   to the sheet in the background (one queue, so order is kept), and the cache is
   cleared. Only the affected row is appended, updated or deleted.
@@ -94,8 +97,9 @@ This creates `personnes` (`nom`), `idees` (`id, destinataire, nom, prix,
 statut, suggere_par, cree_le, lien, prive`), `commentaires` (`id, idee_id, auteur, texte,
 cree_le`), `notes` (`destinataire, texte, modifie_par, modifie_le`: one
 shared notepad per person) and `souhaits` (`id, personne, nom, prix, lien,
-cree_le`: each person's own wishes), writes the headers, and adds any names not
-already present. It is safe to run again. You can also do it by hand: create the five tabs with
+cree_le`: each person's own wishes) and `votes` (`idee_id, personne, vote,
+modifie_le`), writes the headers, and adds any names not
+already present. It is safe to run again. You can also do it by hand: create the six tabs with
 exactly those headers in row 1 and type the names under `nom`.
 
 To rename someone or add a person later, edit the `personnes` tab directly
@@ -157,4 +161,6 @@ Add `PERENOEL_PASSWORD=test` in front to try the password screen locally.
   the host page outside the app, so CSS cannot hide them.
 - Sheets API quota is ~60 read requests per minute per user; with the shared
   25 s cache, normal family use stays far below that.
+- Tabs or columns added by a newer version of the app (e.g. `votes`, `prive`)
+  are created automatically in your sheet the first time the app starts.
 - Concurrency: last write wins. Changes by others appear within ~25 s.

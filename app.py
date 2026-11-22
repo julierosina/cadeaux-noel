@@ -1,6 +1,6 @@
 """🎁 Idées cadeaux de Noël — petite app Streamlit familiale.
 
-Stockage : une Google Sheet privée (5 onglets) via un compte de service.
+Stockage : une Google Sheet privée (6 onglets) via un compte de service.
 Pour tester sans Google : PERENOEL_BACKEND=local streamlit run app.py
 """
 
@@ -39,6 +39,7 @@ HEADERS = {
     "commentaires": ["id", "idee_id", "auteur", "texte", "cree_le"],
     "notes": ["destinataire", "texte", "modifie_par", "modifie_le"],
     "souhaits": ["id", "personne", "nom", "prix", "lien", "cree_le"],
+    "votes": ["idee_id", "personne", "vote", "modifie_le"],  # vote : "+1" (♥) ou "-1"
 }
 TITRE = "Cadeaux Noël 2026"
 UNDO_SECONDS = 12
@@ -114,9 +115,11 @@ class SheetsBackend:
             self._ws = {ws.title: ws for ws in self.sh.worksheets()}
         except Exception as e:  # noqa: BLE001
             raise BackendError(f"Connexion impossible : {e}") from e
-        missing = [t for t in HEADERS if t not in self._ws]
-        if missing:
-            raise BackendError(f"Onglets manquants : {missing}")
+        for t in [t for t in HEADERS if t not in self._ws]:
+            # Nouvel onglet ajouté dans une version plus récente de l'app (ex. « votes »).
+            ws = self._call(self.sh.add_worksheet, title=t, rows=200, cols=len(HEADERS[t]))
+            self._call(ws.update, range_name="A1", values=[HEADERS[t]], value_input_option="RAW")
+            self._ws[t] = ws
         self._upgrade_headers()
 
     def _upgrade_headers(self):
@@ -206,15 +209,33 @@ class SheetsBackend:
             self._call(self.sh.values_batch_update, {"valueInputOption": "RAW", "data": [
                 {"range": f"'notes'!B{row}:D{row}", "values": [[texte, par, le]]}]})
 
+    def set_vote(self, iid: str, person: str, val: str, le: str):
+        """Un vote par personne et par idée ; val vide = retirer le vote."""
+        resp = self._call(self.sh.values_batch_get, ["'votes'!A:B"])
+        rows = (resp.get("valueRanges") or [{}])[0].get("values", [])
+        row = next((i + 1 for i, r in enumerate(rows)
+                    if i > 0 and len(r) > 1 and r[0] == iid and r[1] == person), None)
+        if not val:
+            if row:
+                self._call(self.sh.batch_update, {"requests": self._delete_requests("votes", [row])})
+        elif row:
+            self._call(self.sh.values_batch_update, {"valueInputOption": "RAW", "data": [
+                {"range": f"'votes'!C{row}:D{row}", "values": [[val, le]]}]})
+        else:
+            self.append("votes", {"idee_id": iid, "personne": person, "vote": val, "modifie_le": le})
+
     def delete_idee(self, iid: str):
-        # Un seul appel pour localiser l'idée et ses commentaires, un seul pour supprimer.
-        resp = self._call(self.sh.values_batch_get, ["'idees'!A:A", "'commentaires'!A:B"])
+        # Un seul appel pour localiser l'idée, ses commentaires et ses votes ; un seul pour supprimer.
+        resp = self._call(self.sh.values_batch_get, ["'idees'!A:A", "'commentaires'!A:B", "'votes'!A:A"])
         vrs = resp.get("valueRanges", [])
         idees = vrs[0].get("values", []) if vrs else []
         coms = vrs[1].get("values", []) if len(vrs) > 1 else []
+        votes = vrs[2].get("values", []) if len(vrs) > 2 else []
         rows_i = [i + 1 for i, r in enumerate(idees) if i > 0 and r and r[0] == iid]
         rows_c = [i + 1 for i, r in enumerate(coms) if i > 0 and len(r) > 1 and r[1] == iid]
-        reqs = self._delete_requests("idees", rows_i) + self._delete_requests("commentaires", rows_c)
+        rows_v = [i + 1 for i, r in enumerate(votes) if i > 0 and r and r[0] == iid]
+        reqs = (self._delete_requests("idees", rows_i) + self._delete_requests("commentaires", rows_c)
+                + self._delete_requests("votes", rows_v))
         if reqs:
             self._call(self.sh.batch_update, {"requests": reqs})
 
@@ -251,7 +272,7 @@ class LocalBackend:
             db = self._load()
         return {"personnes": [p for p in db["personnes"] if p], "idees": db["idees"],
                 "commentaires": db["commentaires"], "notes": db.get("notes", []),
-                "souhaits": db.get("souhaits", [])}
+                "souhaits": db.get("souhaits", []), "votes": db.get("votes", [])}
 
     def append(self, tab, rec):
         self._write(lambda db: db.setdefault(tab, []).append({k: rec.get(k, "") for k in HEADERS[tab]}))
@@ -282,10 +303,19 @@ class LocalBackend:
     def delete_comment(self, cid):
         self.delete_row("commentaires", cid)
 
+    def set_vote(self, iid, person, val, le):
+        def f(db):
+            votes = [v for v in db.get("votes", []) if not (v["idee_id"] == iid and v["personne"] == person)]
+            if val:
+                votes.append({"idee_id": iid, "personne": person, "vote": val, "modifie_le": le})
+            db["votes"] = votes
+        self._write(f)
+
     def delete_idee(self, iid):
         def f(db):
             db["idees"] = [i for i in db["idees"] if i["id"] != iid]
             db["commentaires"] = [c for c in db["commentaires"] if c["idee_id"] != iid]
+            db["votes"] = [v for v in db.get("votes", []) if v["idee_id"] != iid]
         self._write(f)
 
 
@@ -481,11 +511,27 @@ def act_delete_idee(iid):
     if not it:
         return
     coms = [c for c in ss.db["commentaires"] if c["idee_id"] == iid]
+    votes = [v for v in ss.db.get("votes", []) if v["idee_id"] == iid]
     ss.db["idees"] = [i for i in ss.db["idees"] if i["id"] != iid]
     ss.db["commentaires"] = [c for c in ss.db["commentaires"] if c["idee_id"] != iid]
+    ss.db["votes"] = [v for v in ss.db.get("votes", []) if v["idee_id"] != iid]
     ss.open = None
     submit("delete_idee", iid)
-    _set_undo(f"« {it['nom']} » supprimée", [("idees", it)] + [("commentaires", c) for c in coms])
+    _set_undo(f"« {it['nom']} » supprimée", [("idees", it)] + [("commentaires", c) for c in coms]
+              + [("votes", v) for v in votes])
+
+
+def act_vote(iid, user, val):
+    if "db" not in ss:
+        return
+    votes = ss.db.setdefault("votes", [])
+    mine = next((v for v in votes if v["idee_id"] == iid and v["personne"] == user), None)
+    new = "" if mine and mine["vote"] == val else val  # re-toucher le même bouton = retirer
+    ss.db["votes"] = [v for v in votes if v is not mine]
+    now = now_iso()
+    if new:
+        ss.db["votes"].append({"idee_id": iid, "personne": user, "vote": new, "modifie_le": now})
+    submit("set_vote", iid, user, new, now)
 
 
 def act_delete_wish(wid):
@@ -667,6 +713,14 @@ html { scroll-behavior: smooth; }
 [class*="st-key-it_"][class*="_prv"] { background: #eef2e4; border-left: 3px solid #5d7a4a;
   border-radius: 10px; padding-left: 8px; margin: 3px 0; border-bottom: none; }
 .row .sec { color: #4f6a3d; font-weight: 600; }
+[class*="st-key-votes_"] { flex-wrap: nowrap !important; gap: 4px !important; }
+[class*="st-key-vup_"] button, [class*="st-key-vdn_"] button {
+  min-height: 40px; min-width: 52px; padding: 0 10px; border-radius: 999px !important;
+  border: 1px solid #e8dfd2 !important; background: var(--paper) !important; color: var(--muted) !important; }
+[class*="st-key-vup_"][class*="_on"] button { color: #c0392b !important; border-color: #e8b4ac !important; background: #fbecea !important; }
+[class*="st-key-vdn_"][class*="_on"] button { color: #5b4a3f !important; border-color: #cfc3b5 !important; background: #f1ebe3 !important; }
+[class*="st-key-vup_"] button p, [class*="st-key-vdn_"] button p { font-size: .9rem; }
+.vwho { font-size: .78rem; color: var(--muted); padding-left: 4px; overflow-wrap: anywhere; }
 .row .lk { color: var(--muted); font-size: .85em; }
 a.lnk { display: inline-block; min-height: 32px; line-height: 32px; color: var(--accent) !important;
   text-decoration: none; font-size: .95rem; overflow-wrap: anywhere; }
@@ -998,6 +1052,9 @@ def render_item(it, db, user, ti, dest):
     autres = [d for d in dests(it) if d != dest]
     if autres:
         tags.append("commun avec " + esc(", ".join(autres)))
+    ups, downs = vote_counts(it, db)
+    if ups or downs:
+        tags.append(" ".join(x for x in (f"♥ {ups}" if ups else "", f"👎 {downs}" if downs else "") if x))
     if secret:
         tags.append('<span class="sec">secret · visible par vous seul</span>')
     with st.container(key=f"it_{k}" + ("_prv" if secret else "")):
@@ -1026,6 +1083,34 @@ def render_item(it, db, user, ti, dest):
             render_details(it, db, user, k)
 
 
+def vote_counts(it, db):
+    vs = [v for v in db.get("votes", []) if v["idee_id"] == it["id"]]
+    return sum(v["vote"] == "+1" for v in vs), sum(v["vote"] == "-1" for v in vs)
+
+
+def render_votes(it, db, user, k):
+    iid = it["id"]
+    vs = [v for v in db.get("votes", []) if v["idee_id"] == iid]
+    mine = next((v["vote"] for v in vs if v["personne"] == user), "")
+    ups = [v["personne"] for v in vs if v["vote"] == "+1"]
+    downs = [v["personne"] for v in vs if v["vote"] == "-1"]
+    with st.container(horizontal=True, wrap=False, gap="small", vertical_alignment="center",
+                      key=f"votes_{k}"):
+        st.button(str(len(ups)), key=f"vup_{k}" + ("_on" if mine == "+1" else ""), type="tertiary",
+                  icon=":material/favorite:", help="J'aime cette idée",
+                  on_click=act_vote, args=(iid, user, "+1"))
+        st.button(str(len(downs)), key=f"vdn_{k}" + ("_on" if mine == "-1" else ""), type="tertiary",
+                  icon=":material/thumb_down:", help="Pas convaincu·e",
+                  on_click=act_vote, args=(iid, user, "-1"))
+        who = []
+        if ups:
+            who.append("♥ " + ", ".join(ups))
+        if downs:
+            who.append("👎 " + ", ".join(downs))
+        if who:
+            st.markdown(f'<div class="vwho">{esc(" · ".join(who))}</div>', unsafe_allow_html=True)
+
+
 def render_details(it, db, user, k):
     iid = it["id"]
     with st.container(key=f"det_{k}"):
@@ -1033,6 +1118,7 @@ def render_details(it, db, user, k):
         if lien:
             st.markdown(f'<a class="lnk" href="{esc(lien)}" target="_blank" rel="noopener noreferrer">'
                         f'{esc(url_label(lien))} ↗</a>', unsafe_allow_html=True)
+        render_votes(it, db, user, k)
         st.markdown('<div class="lbl">Commentaires</div>', unsafe_allow_html=True)
         coms = sorted((c for c in db["commentaires"] if c["idee_id"] == iid),
                       key=lambda c: c.get("cree_le", ""))

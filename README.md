@@ -33,6 +33,11 @@ static/motifs/                 illustrations (used with permission), served by S
   row on a phone), people with the fewest ideas first (order fixed when you
   open the app). Each tile shows their wishes, the ideas list, an
   "Ajouter une idée" link and a shared notepad that saves when you leave the field.
+- An idea can be for several people at once (a joint gift, e.g. a couple): it
+  shows in each of their tiles and stays hidden from all of them. In the sheet,
+  `destinataire` then reads `Bruno + Victoire`.
+- An idea can be marked secret: only the person who added it sees it, as a
+  green-tinted line (`prive` = `oui` in the sheet).
 - Deleting an idea or a wish is immediate; an "Annuler" bar appears for about
   12 seconds to bring it back.
 - Reads: one API call fetches all five tabs, cached for 25 s and shared by all
@@ -86,7 +91,7 @@ Then create the tabs and add the family:
 python init_sheet.py --names "Alice, Bob, Camille, David"
 ```
 This creates `personnes` (`nom`), `idees` (`id, destinataire, nom, prix,
-statut, suggere_par, cree_le, lien`), `commentaires` (`id, idee_id, auteur, texte,
+statut, suggere_par, cree_le, lien, prive`), `commentaires` (`id, idee_id, auteur, texte,
 cree_le`), `notes` (`destinataire, texte, modifie_par, modifie_le`: one
 shared notepad per person) and `souhaits` (`id, personne, nom, prix, lien,
 cree_le`: each person's own wishes), writes the headers, and adds any names not

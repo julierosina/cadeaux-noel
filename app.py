@@ -35,13 +35,27 @@ TTL = 25  # secondes de cache pour les lectures
 IDEE, ACHETE = "Idée", "Acheté"
 HEADERS = {
     "personnes": ["nom"],
-    "idees": ["id", "destinataire", "nom", "prix", "statut", "suggere_par", "cree_le", "lien"],
+    "idees": ["id", "destinataire", "nom", "prix", "statut", "suggere_par", "cree_le", "lien", "prive"],
     "commentaires": ["id", "idee_id", "auteur", "texte", "cree_le"],
     "notes": ["destinataire", "texte", "modifie_par", "modifie_le"],
     "souhaits": ["id", "personne", "nom", "prix", "lien", "cree_le"],
 }
 TITRE = "Cadeaux Noël 2026"
 UNDO_SECONDS = 12
+
+
+SEP = " + "  # cadeaux communs : « Bruno + Victoire » dans la colonne destinataire
+
+
+def dests(it) -> list[str]:
+    return [d.strip() for d in str(it.get("destinataire", "")).split("+") if d.strip()]
+
+
+def visible(it, user) -> bool:
+    """Jamais pour un destinataire ; une idée secrète seulement pour son auteur."""
+    if user in dests(it):
+        return False
+    return not it.get("prive") or it.get("suggere_par") == user
 
 
 def new_id() -> str:
@@ -103,6 +117,20 @@ class SheetsBackend:
         missing = [t for t in HEADERS if t not in self._ws]
         if missing:
             raise BackendError(f"Onglets manquants : {missing}")
+        self._upgrade_headers()
+
+    def _upgrade_headers(self):
+        """Ajoute les nouvelles colonnes en fin de ligne d'en-tête (feuilles plus anciennes)."""
+        resp = self._call(self.sh.values_batch_get, [f"'{t}'!1:1" for t in HEADERS])
+        for t, vr in zip(HEADERS, resp.get("valueRanges", [])):
+            rows = vr.get("values") or [[]]
+            first = [str(x).strip() for x in rows[0]]
+            exp = HEADERS[t]
+            if first and len(first) < len(exp) and first == exp[: len(first)]:
+                ws = self._ws[t]
+                if ws.col_count < len(exp):
+                    self._call(ws.add_cols, len(exp) - ws.col_count)
+                self._call(ws.update, range_name="A1", values=[exp], value_input_option="RAW")
 
     def _call(self, fn, *args, **kwargs):
         for attempt in range(3):
@@ -418,12 +446,12 @@ def act_toggle(iid):
         submit("update", "idees", iid, {"statut": it["statut"]})
 
 
-def act_open(iid):
-    ss.open = None if ss.open == iid else iid
+def act_open(okey):
+    ss.open = None if ss.open == okey else okey
 
 
-def act_add_comment(iid, user):
-    texte = (ss.get(f"ct_{iid}") or "").strip()
+def act_add_comment(iid, user, key):
+    texte = (ss.get(key) or "").strip()
     if texte and "db" in ss:
         rec = {"id": new_id(), "idee_id": iid, "auteur": user, "texte": texte, "cree_le": now_iso()}
         ss.db["commentaires"].append(rec)
@@ -636,6 +664,9 @@ html { scroll-behavior: smooth; }
 .row .by { font-size: .8rem; color: var(--muted); margin-top: 1px; }
 .row .px { font-size: .95rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .row.done .nm { color: var(--muted); }
+[class*="st-key-it_"][class*="_prv"] { background: #eef2e4; border-left: 3px solid #5d7a4a;
+  border-radius: 10px; padding-left: 8px; margin: 3px 0; border-bottom: none; }
+.row .sec { color: #4f6a3d; font-weight: 600; }
 .row .lk { color: var(--muted); font-size: .85em; }
 a.lnk { display: inline-block; min-height: 32px; line-height: 32px; color: var(--accent) !important;
   text-decoration: none; font-size: .95rem; overflow-wrap: anywhere; }
@@ -713,42 +744,58 @@ def title(text):
 # --------------------------------------------------------------------------- #
 # Dialogues
 # --------------------------------------------------------------------------- #
+def _idea_fields(user, dest_default, it=None):
+    """Champs communs aux dialogues d'ajout et de modification."""
+    it = it or {}
+    others = [p for p in ss.db["personnes"] if p != user]
+    nom = st.text_input("Nom", value=it.get("nom", ""), placeholder="ex. Un livre de cuisine")
+    prix = st.text_input("Prix (optionnel)", value=it.get("prix", ""), placeholder="ex. 25")
+    lien = st.text_input("Lien (optionnel)", value=it.get("lien", ""), placeholder="https://…")
+    pour = st.multiselect("Pour", others, default=[d for d in dest_default if d in others],
+                          help="Plusieurs personnes = cadeau commun (ex. un couple)",
+                          placeholder="Choisir…")
+    secret = st.checkbox("Secret : visible seulement par moi", value=bool(it.get("prive")))
+    return nom, prix, lien, pour, secret
+
+
+def _check_idea(nom, pour):
+    if not nom.strip():
+        st.error("Le nom est obligatoire.")
+        return False
+    if not pour:
+        st.error("Choisissez au moins une personne.")
+        return False
+    return True
+
+
 @st.dialog("Ajouter une idée")
 def dlg_add(dest, user):
     with st.form("f_add", border=False):
-        nom = st.text_input("Nom", placeholder="ex. Un livre de cuisine")
-        prix = st.text_input("Prix (optionnel)", placeholder="ex. 25")
-        lien = st.text_input("Lien (optionnel)", placeholder="https://…")
+        nom, prix, lien, pour, secret = _idea_fields(user, [dest])
         st.caption(f"Suggéré par {user}")
         ok = st.form_submit_button("Ajouter", type="primary", width="stretch")
-    if ok:
-        if not nom.strip():
-            st.error("Le nom est obligatoire.")
-            return
-        rec = {"id": new_id(), "destinataire": dest, "nom": nom.strip(), "prix": prix.strip(),
+    if ok and _check_idea(nom, pour):
+        rec = {"id": new_id(), "destinataire": SEP.join(pour), "nom": nom.strip(), "prix": prix.strip(),
                "statut": IDEE, "suggere_par": user, "cree_le": now_iso(),
-               "lien": norm_url(lien)}
+               "lien": norm_url(lien), "prive": "oui" if secret else ""}
         ss.db["idees"].append(rec)
         submit("append", "idees", rec)
         st.rerun()
 
 
 @st.dialog("Modifier l'idée")
-def dlg_edit(iid):
+def dlg_edit(iid, user):
     it = find_idee(iid)
     if not it:
         st.rerun()
     with st.form(f"f_edit_{iid}", border=False):
-        nom = st.text_input("Nom", value=it["nom"])
-        prix = st.text_input("Prix (optionnel)", value=it["prix"])
-        lien = st.text_input("Lien (optionnel)", value=it.get("lien", ""), placeholder="https://…")
+        nom, prix, lien, pour, secret = _idea_fields(user, dests(it), it)
         ok = st.form_submit_button("Enregistrer", type="primary", width="stretch")
-    if ok:
-        if not nom.strip():
-            st.error("Le nom est obligatoire.")
-            return
-        it["nom"], it["prix"], it["lien"] = nom.strip(), prix.strip(), norm_url(lien)
-        submit("update", "idees", iid, {"nom": it["nom"], "prix": it["prix"], "lien": it["lien"]})
+    if ok and _check_idea(nom, pour):
+        fields = {"nom": nom.strip(), "prix": prix.strip(), "lien": norm_url(lien),
+                  "destinataire": SEP.join(pour), "prive": "oui" if secret else ""}
+        it.update(fields)
+        submit("update", "idees", iid, fields)
         st.rerun()
 
 
@@ -793,7 +840,6 @@ def dlg_wish_edit(wid):
 def page_picker(people):
     st.markdown(f'<div class="hero">{motif("ecureuil")}</div>', unsafe_allow_html=True)
     title("Qui êtes-vous ?")
-    st.markdown('<div class="sub">Touchez votre prénom.</div>', unsafe_allow_html=True)
     st.write("")
     if not people:
         st.markdown('<div class="vide">Aucune personne dans l\'onglet « personnes ».</div>', unsafe_allow_html=True)
@@ -820,7 +866,7 @@ def page_home(user, people, db):
     # pour qu'une tuile ne saute pas ailleurs pendant qu'on y ajoute quelque chose.
     order_key = (user, tuple(others))
     if ss.get("order_key") != order_key:
-        counts = Counter(i["destinataire"] for i in db["idees"])
+        counts = Counter(d for i in db["idees"] if visible(i, user) for d in dests(i))
         ss.order = sorted(others, key=lambda p: counts[p])
         ss.order_key = order_key
     order = ss.order
@@ -872,9 +918,6 @@ def render_my_wishes(user, db):
     with st.container(key="mine"):
         st.markdown(f'<div id="moi" class="anchor"></div><div class="th"><span class="tl">{motif("paquet", "tm")}<span class="tn">Mes souhaits</span></span>'
                     '<span class="tc">visibles par la famille</span></div>', unsafe_allow_html=True)
-        if not mine:
-            st.markdown('<div class="vide">Ajoutez ce qui vous ferait plaisir. Vous ne verrez jamais '
-                        'les idées des autres pour vous.</div>', unsafe_allow_html=True)
         for w in mine:
             with st.container(horizontal=True, wrap=False, gap="small", vertical_alignment="center",
                               key=f"wrow_{w['id']}"):
@@ -893,7 +936,7 @@ def _plural(n, word):
 
 
 def render_tile(i, dest, db, user, anchor_id):
-    items = sorted((it for it in db["idees"] if it["destinataire"] == dest), key=sort_key)
+    items = sorted((it for it in db["idees"] if dest in dests(it) and visible(it, user)), key=sort_key)
     wishes = sorted((w for w in db.get("souhaits", []) if w["personne"] == dest),
                     key=lambda w: w.get("cree_le", ""))
     n_bought = sum(it["statut"] == ACHETE for it in items)
@@ -923,7 +966,7 @@ def render_tile(i, dest, db, user, anchor_id):
             st.markdown('<div class="lbl" style="margin:12px 0 2px">Idées</div>', unsafe_allow_html=True)
         with st.container(key=f"liste_{i}"):
             for it in items:
-                render_item(it, db, user)
+                render_item(it, db, user, i, dest)
         if st.button("Ajouter une idée", key=f"add_{i}", type="tertiary", icon=":material/add:"):
             dlg_add(dest, user)
         render_note(i, dest, db, user)
@@ -939,45 +982,53 @@ def render_note(i, dest, db, user):
     ss[seen] = txt if ss[key] == txt else ss.get(seen, txt)
     st.markdown('<div class="lbl" style="margin:10px 0 6px">Notes</div>', unsafe_allow_html=True)
     st.text_area("Notes", key=key, label_visibility="collapsed", height="content",
-                 placeholder="Tailles, envies, idées en vrac…",
                  on_change=act_note, args=(dest, key, seen, user))
     if note.get("modifie_par"):
         st.markdown(f'<div class="nby">modifié par {esc(note["modifie_par"])}</div>',
                     unsafe_allow_html=True)
 
 
-def render_item(it, db, user):
+def render_item(it, db, user, ti, dest):
+    """ti/dest : la tuile où l'idée est affichée (une idée commune apparaît dans plusieurs tuiles)."""
     iid = it["id"]
+    k = f"{iid}_{ti}"
     bought = it["statut"] == ACHETE
-    with st.container(key=f"it_{iid}"):
-        with st.container(horizontal=True, wrap=False, gap="small", key=f"row_{iid}"):
+    secret = bool(it.get("prive"))
+    tags = [f"suggéré par {esc(it['suggere_par'])}"]
+    autres = [d for d in dests(it) if d != dest]
+    if autres:
+        tags.append("commun avec " + esc(", ".join(autres)))
+    if secret:
+        tags.append('<span class="sec">secret · visible par vous seul</span>')
+    with st.container(key=f"it_{k}" + ("_prv" if secret else "")):
+        with st.container(horizontal=True, wrap=False, gap="small", key=f"row_{k}"):
             st.button(
                 "Remettre en idée" if bought else "Marquer comme acheté",
-                key=f"tog_{iid}", type="tertiary",
+                key=f"tog_{k}", type="tertiary",
                 icon=":material/check_circle:" if bought else ":material/radio_button_unchecked:",
                 on_click=act_toggle, args=(iid,),
             )
-            with st.container(key=f"body_{iid}"):
+            with st.container(key=f"body_{k}"):
                 prix = fmt_prix(it["prix"])
                 st.markdown(
                     f'<div class="row{" done" if bought else ""}"><div>'
                     f'<div class="nm">{esc(it["nom"])}'
                     + (' <span class="lk" title="lien">↗</span>' if it.get("lien") else "")
                     + '</div>'
-                    f'<div class="by">suggéré par {esc(it["suggere_par"])}</div></div>'
+                    f'<div class="by">{" · ".join(tags)}</div></div>'
                     + (f'<div class="px">{esc(prix)}</div>' if prix else "")
                     + "</div>",
                     unsafe_allow_html=True,
                 )
-                st.button(f"Détails : {it['nom']}", key=f"open_{iid}", type="tertiary",
-                          on_click=act_open, args=(iid,))
-        if ss.open == iid:
-            render_details(it, db, user)
+                st.button(f"Détails : {it['nom']}", key=f"open_{k}", type="tertiary",
+                          on_click=act_open, args=(k,))
+        if ss.open == k:
+            render_details(it, db, user, k)
 
 
-def render_details(it, db, user):
+def render_details(it, db, user, k):
     iid = it["id"]
-    with st.container(key=f"det_{iid}"):
+    with st.container(key=f"det_{k}"):
         lien = it.get("lien", "")
         if lien:
             st.markdown(f'<a class="lnk" href="{esc(lien)}" target="_blank" rel="noopener noreferrer">'
@@ -986,22 +1037,22 @@ def render_details(it, db, user):
         coms = sorted((c for c in db["commentaires"] if c["idee_id"] == iid),
                       key=lambda c: c.get("cree_le", ""))
         for c in coms:
-            with st.container(horizontal=True, wrap=False, gap="small", key=f"crow_{c['id']}"):
+            with st.container(horizontal=True, wrap=False, gap="small", key=f"crow_{c['id']}_{k}"):
                 st.markdown(f'<div class="com"><span class="au">{esc(c["auteur"])} :</span> '
                             f'{esc(c["texte"])}</div>', unsafe_allow_html=True)
-                st.button("Supprimer le commentaire", key=f"delc_{c['id']}", type="tertiary",
+                st.button("Supprimer le commentaire", key=f"delc_{c['id']}_{k}", type="tertiary",
                           icon=":material/close:", on_click=act_del_comment, args=(c["id"],))
-        with st.form(f"cf_{iid}", clear_on_submit=True, border=False):
-            with st.container(horizontal=True, wrap=False, gap="small", key=f"cbar_{iid}",
+        with st.form(f"cf_{k}", clear_on_submit=True, border=False):
+            with st.container(horizontal=True, wrap=False, gap="small", key=f"cbar_{k}",
                               vertical_alignment="center"):
-                st.text_input("Commentaire", key=f"ct_{iid}", placeholder="Ajouter un commentaire…",
+                st.text_input("Commentaire", key=f"ct_{k}", placeholder="Ajouter un commentaire…",
                               label_visibility="collapsed")
                 st.form_submit_button("Envoyer", type="tertiary",
-                                      on_click=act_add_comment, args=(iid, user))
-        with st.container(horizontal=True, gap="medium", key=f"acts_{iid}"):
-            if st.button("Modifier", key=f"edit_{iid}", type="tertiary"):
-                dlg_edit(iid)
-            st.button("Supprimer", key=f"del_{iid}", type="tertiary",
+                                      on_click=act_add_comment, args=(iid, user, f"ct_{k}"))
+        with st.container(horizontal=True, gap="medium", key=f"acts_{k}"):
+            if st.button("Modifier", key=f"edit_{k}", type="tertiary"):
+                dlg_edit(iid, user)
+            st.button("Supprimer", key=f"del_{k}", type="tertiary",
                       on_click=act_delete_idee, args=(iid,))
 
 

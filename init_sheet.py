@@ -28,7 +28,7 @@ from pathlib import Path
 
 HEADERS = {
     "personnes": ["nom"],
-    "idees": ["id", "destinataire", "nom", "prix", "statut", "suggere_par", "cree_le", "lien"],
+    "idees": ["id", "destinataire", "nom", "prix", "statut", "suggere_par", "cree_le", "lien", "prive"],
     "commentaires": ["id", "idee_id", "auteur", "texte", "cree_le"],
     "notes": ["destinataire", "texte", "modifie_par", "modifie_le"],
     "souhaits": ["id", "personne", "nom", "prix", "lien", "cree_le"],

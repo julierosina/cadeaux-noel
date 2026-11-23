@@ -692,22 +692,18 @@ html { scroll-behavior: smooth; }
   border-radius: 13px; pointer-events: none; }  /* « couture » autour de mes souhaits */
 [class*="st-key-wrow_"] { flex-wrap: nowrap !important; border-bottom: .5px solid var(--hair); }
 [class*="st-key-wrow_"] > div:first-child { flex: 1 1 auto; min-width: 0; }
-.wish { display:flex; align-items:center; justify-content:space-between; gap: 12px; min-height: 48px; padding: 6px 0; }
+[class*="st-key-wrow_"] > div:not(:first-child) { flex: 0 0 auto !important; width: auto !important; }
+.wish { display:flex; flex-wrap: wrap; align-items:center; gap: 2px 14px; min-height: 48px; padding: 6px 0; }
+.wish .wmain { flex: 1 1 140px; min-width: 0; display:flex; align-items:center; justify-content:space-between; gap: 12px; }
+.wcoms { flex: 1 1 150px; min-width: 0; border-left: 2px solid #ead9cc; padding: 2px 0 2px 10px; }
+.wcoms .com { font-size: .85rem; }
 .wish .nm { font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
 .wish .px { font-size: .9rem; color: var(--muted); white-space: nowrap; }
-.wish a.lnk { min-height: 24px; line-height: 24px; font-size: .85rem; }
+.wish a.lnk { min-height: 24px; line-height: 24px; font-size: .85rem; position: relative; z-index: 3; }
 .wdone { font-size: .75rem; color: var(--muted); white-space: nowrap; }
-[class*="st-key-wc_"] button { min-height: 44px; min-width: 40px; padding: 0 4px; color: var(--muted) !important; }
-[class*="st-key-wc_"] button p { font-size: .85rem; }
-[class*="st-key-wc_"][class*="_z"] button [data-testid="stMarkdownContainer"] {
-  position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 [class*="st-key-det_w_"] { padding: 2px 0 12px 0; }
 [class*="st-key-w2i_"] button { min-height: 44px; padding: 0 4px; color: var(--accent) !important; }
 [class*="st-key-w2i_"] button p { font-size: .85rem; }
-[class*="st-key-icoedit_"] button, [class*="st-key-icodel_"] button { min-height: 44px; min-width: 36px; padding: 0; color: var(--muted) !important; }
-[class*="st-key-icoedit_"] button [data-testid="stMarkdownContainer"],
-[class*="st-key-icodel_"] button [data-testid="stMarkdownContainer"] {
-  position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 .st-key-add_wish button { min-height: 44px; padding: 0; color: var(--accent) !important; }
 
 /* Barre « Annuler » après suppression */
@@ -732,7 +728,7 @@ html { scroll-behavior: smooth; }
 [class*="st-key-open_"] { position: absolute !important; inset: 0; width: auto !important; height: auto !important; z-index: 2; margin: 0; }
 [class*="st-key-open_"] button, [class*="st-key-open_"] .stButton { width: 100%; height: 100%; opacity: 0; }
 
-.row { display:flex; align-items:center; justify-content:space-between; gap: 12px; min-height: 56px; padding: 8px 0; }
+.row { display:flex; align-items:center; justify-content:space-between; gap: 12px; min-height: 52px; padding: 8px 0 4px; }
 .row .nm { font-size: 1.05rem; line-height: 1.3; overflow-wrap: anywhere; }
 .row .by { font-size: .8rem; color: var(--muted); margin-top: 1px; }
 .row .px { font-size: .95rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -742,11 +738,12 @@ html { scroll-behavior: smooth; }
 .row .sec { color: #4f6a3d; font-weight: 600; }
 [class*="st-key-votes_"] { flex-wrap: nowrap !important; gap: 4px !important; }
 [class*="st-key-vup_"] button, [class*="st-key-vdn_"] button {
-  min-height: 40px; min-width: 52px; padding: 0 10px; border-radius: 999px !important;
+  min-height: 34px; min-width: 50px; padding: 0 10px; border-radius: 999px !important;
   border: 1px solid #e8dfd2 !important; background: var(--paper) !important; color: var(--muted) !important; }
 [class*="st-key-vup_"][class*="_on"] button { color: #c0392b !important; border-color: #e8b4ac !important; background: #fbecea !important; }
 [class*="st-key-vdn_"][class*="_on"] button { color: #5b4a3f !important; border-color: #cfc3b5 !important; background: #f1ebe3 !important; }
-[class*="st-key-vup_"] button p, [class*="st-key-vdn_"] button p { font-size: .9rem; }
+[class*="st-key-vup_"] button p, [class*="st-key-vdn_"] button p { font-size: .85rem; }
+[class*="st-key-vup_"] button span, [class*="st-key-vdn_"] button span { font-size: 1rem !important; }
 .vwho { font-size: .78rem; color: var(--muted); padding-left: 4px; overflow-wrap: anywhere; }
 .row .lk { color: var(--muted); font-size: .85em; }
 .lnks { display: flex; flex-wrap: wrap; column-gap: 14px; align-items: baseline; }
@@ -755,10 +752,16 @@ a.lnk { display: inline-block; min-height: 32px; line-height: 32px; color: var(-
   text-decoration: none; font-size: .95rem; overflow-wrap: anywhere; }
 
 /* Détails dépliés */
-[class*="st-key-det_"] { padding: 0 0 14px 44px; gap: .35rem !important; }
+[class*="st-key-det_"] { padding: 0 0 12px 44px; gap: .35rem !important; }
 .lbl { font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-top: 2px; }
 .com { font-size: .95rem; line-height: 1.35; overflow-wrap: anywhere; }
 .com .au { color: var(--muted); }
+.coms { display: flex; flex-direction: column; gap: 3px; }
+[class*="st-key-under_"] { padding: 0 0 10px 44px; gap: 6px !important; }
+[class*="st-key-under_"] [data-testid="stForm"] { padding: 0; }
+[class*="st-key-under_"] [data-testid="stTextInputRootElement"] { background: transparent !important; border: none !important; border-bottom: .5px solid var(--hair) !important; border-radius: 0 !important; }
+[class*="st-key-under_"] input { padding-left: 0; font-size: 16px; min-height: 44px; }
+.addby { font-size: .85rem; color: var(--muted); }
 .vide { font-size: .9rem; color: var(--muted); }
 [class*="st-key-crow_"] { flex-wrap: nowrap !important; align-items: center; }
 [class*="st-key-crow_"] > div:first-child { flex: 1 1 auto; min-width: 0; }
@@ -1030,41 +1033,71 @@ def render_undo():
             st.rerun()  # toute la page, pour réafficher l'élément restauré
 
 
-def _wish_html(w, extra=""):
+def _coms(target_id, db):
+    return sorted((c for c in db["commentaires"] if c["idee_id"] == target_id),
+                  key=lambda c: c.get("cree_le", ""))
+
+
+def _coms_html(coms, cls="coms") -> str:
+    return (f'<div class="{cls}">' + "".join(
+        f'<div class="com"><span class="au">{esc(c["auteur"])} :</span> {esc(c["texte"])}</div>'
+        for c in coms) + "</div>")
+
+
+def _wish_html(w, coms=()):
+    """Souhait ; ses commentaires s'affichent à droite (ou dessous si la place manque)."""
     prix = fmt_prix(w.get("prix", ""))
     links = links_html(w.get("lien", ""))
     link = f'<div class="lnks">{links}</div>' if links else ""
-    return (f'<div class="wish"><div><div class="nm">{esc(w["nom"])}</div>'
-            f'{link}{extra}</div>' + (f'<div class="px">{esc(prix)}</div>' if prix else "") + "</div>")
+    side = _coms_html(coms, "coms wcoms") if coms else ""
+    return (f'<div class="wish"><div class="wmain"><div><div class="nm">{esc(w["nom"])}</div>{link}</div>'
+            + (f'<div class="px">{esc(prix)}</div>' if prix else "") + f"</div>{side}</div>")
 
 
-def wish_comment_button(w, db, k):
-    """Bouton 💬 (avec le nombre de commentaires) qui déplie la discussion du souhait."""
-    n = sum(c["idee_id"] == w["id"] for c in db["commentaires"])
-    st.button(str(n) if n else "Commenter", key=f"wc_{k}" + ("" if n else "_z"), type="tertiary",
-              icon=":material/chat_bubble:", on_click=act_open, args=(k,))
+def render_com_list(coms, k):
+    """Commentaires avec bouton de suppression (vue dépliée)."""
+    for c in coms:
+        with st.container(horizontal=True, wrap=False, gap="small", key=f"crow_{c['id']}_{k}"):
+            st.markdown(f'<div class="com"><span class="au">{esc(c["auteur"])} :</span> '
+                        f'{esc(c["texte"])}</div>', unsafe_allow_html=True)
+            st.button("Supprimer le commentaire", key=f"delc_{c['id']}_{k}", type="tertiary",
+                      icon=":material/close:", on_click=act_del_comment, args=(c["id"],))
+
+
+def comment_form(target_id, user, k, ph):
+    with st.form(f"cf_{k}", clear_on_submit=True, border=False):
+        with st.container(horizontal=True, wrap=False, gap="small", key=f"cbar_{k}",
+                          vertical_alignment="center"):
+            st.text_input("Commentaire", key=f"ct_{k}", placeholder=ph, label_visibility="collapsed")
+            st.form_submit_button("Envoyer", type="tertiary",
+                                  on_click=act_add_comment, args=(target_id, user, f"ct_{k}"))
+
+
+def wish_html(w, db, k):
+    """Souhait avec ses commentaires à droite, sauf quand la discussion est dépliée dessous."""
+    return _wish_html(w, () if ss.open == k else _coms(w["id"], db))
 
 
 def render_wish_comments(w, db, user, k):
     """Commentaires d'un souhait : visibles par tous, y compris la personne qui l'a souhaité."""
-    wid = w["id"]
     with st.container(key=f"det_{k}"):
-        coms = sorted((c for c in db["commentaires"] if c["idee_id"] == wid),
-                      key=lambda c: c.get("cree_le", ""))
-        for c in coms:
-            with st.container(horizontal=True, wrap=False, gap="small", key=f"crow_{c['id']}_{k}"):
-                st.markdown(f'<div class="com"><span class="au">{esc(c["auteur"])} :</span> '
-                            f'{esc(c["texte"])}</div>', unsafe_allow_html=True)
-                st.button("Supprimer le commentaire", key=f"delc_{c['id']}_{k}", type="tertiary",
-                          icon=":material/close:", on_click=act_del_comment, args=(c["id"],))
-        mine = w["personne"] == user
-        ph = "Répondre…" if mine else f"Commenter (visible par {w['personne']})…"
-        with st.form(f"cf_{k}", clear_on_submit=True, border=False):
-            with st.container(horizontal=True, wrap=False, gap="small", key=f"cbar_{k}",
-                              vertical_alignment="center"):
-                st.text_input("Commentaire", key=f"ct_{k}", placeholder=ph, label_visibility="collapsed")
-                st.form_submit_button("Envoyer", type="tertiary",
-                                      on_click=act_add_comment, args=(wid, user, f"ct_{k}"))
+        render_com_list(_coms(w["id"], db), k)
+        ph = "Répondre…" if w["personne"] == user else f"Commenter (visible par {w['personne']})…"
+        comment_form(w["id"], user, k, ph)
+        if w["personne"] == user:
+            with st.container(horizontal=True, gap="medium", key=f"acts_{k}"):
+                if st.button("Modifier", key=f"edit_{k}", type="tertiary"):
+                    dlg_wish_edit(w["id"])
+                st.button("Supprimer", key=f"del_{k}", type="tertiary",
+                          on_click=act_delete_wish, args=(w["id"],))
+
+
+def wish_body(w, db, k):
+    """Le souhait, touchable en entier pour déplier commentaires (et Modifier / Supprimer)."""
+    with st.container(key=f"body_{k}"):
+        st.markdown(wish_html(w, db, k), unsafe_allow_html=True)
+        st.button(f"Détails : {w['nom']}", key=f"open_{k}", type="tertiary",
+                  on_click=act_open, args=(k,))
 
 
 def render_my_wishes(user, db):
@@ -1076,13 +1109,7 @@ def render_my_wishes(user, db):
         for w in mine:
             with st.container(horizontal=True, wrap=False, gap="small", vertical_alignment="center",
                               key=f"wrow_{w['id']}"):
-                st.markdown(_wish_html(w), unsafe_allow_html=True)
-                if st.button("Modifier le souhait", key=f"icoedit_{w['id']}", type="tertiary",
-                             icon=":material/edit:"):
-                    dlg_wish_edit(w["id"])
-                st.button("Supprimer le souhait", key=f"icodel_{w['id']}", type="tertiary",
-                          icon=":material/close:", on_click=act_delete_wish, args=(w["id"],))
-                wish_comment_button(w, db, f"w_{w['id']}_m")
+                wish_body(w, db, f"w_{w['id']}_m")
             if ss.open == f"w_{w['id']}_m":
                 render_wish_comments(w, db, user, f"w_{w['id']}_m")
         if st.button("Ajouter un souhait", key="add_wish", type="tertiary", icon=":material/add:"):
@@ -1114,14 +1141,13 @@ def render_tile(i, dest, db, user, anchor_id):
                 with st.container(horizontal=True, wrap=False, gap="small", vertical_alignment="center",
                                   key=f"wrow_{w['id']}"):
                     already = w["nom"].casefold() in taken or any(u in taken for u in links_of(w.get("lien")))
-                    st.markdown(_wish_html(w), unsafe_allow_html=True)
+                    wish_body(w, db, f"w_{w['id']}_t{i}")
                     if already:
                         st.markdown('<div class="wdone">dans les idées</div>', unsafe_allow_html=True)
                     else:
                         st.button("idée", key=f"w2i_{w['id']}", type="tertiary", icon=":material/add:",
                                   help="Ajouter aux idées (pour suivre l'achat)",
                                   on_click=act_wish_to_idea, args=(w["id"], user))
-                    wish_comment_button(w, db, f"w_{w['id']}_t{i}")
                 if ss.open == f"w_{w['id']}_t{i}":
                     render_wish_comments(w, db, user, f"w_{w['id']}_t{i}")
             st.markdown('<div class="lbl" style="margin:12px 0 2px">Idées</div>', unsafe_allow_html=True)
@@ -1153,15 +1179,13 @@ def render_item(it, db, user, ti, dest):
     """ti/dest : la tuile où l'idée est affichée (une idée commune apparaît dans plusieurs tuiles)."""
     iid = it["id"]
     k = f"{iid}_{ti}"
+    opened = ss.open == k
     bought = it["statut"] == ACHETE
     secret = bool(it.get("prive"))
-    tags = [f"suggéré par {esc(it['suggere_par'])}"]
+    tags = []
     autres = [d for d in dests(it) if d != dest]
     if autres:
         tags.append("commun avec " + esc(", ".join(autres)))
-    ups, downs = vote_counts(it, db)
-    if ups or downs:
-        tags.append(" ".join(x for x in (f"♥ {ups}" if ups else "", f"👎 {downs}" if downs else "") if x))
     if secret:
         tags.append('<span class="sec">secret · visible par vous seul</span>')
     with st.container(key=f"it_{k}" + ("_prv" if secret else "")):
@@ -1179,23 +1203,27 @@ def render_item(it, db, user, ti, dest):
                     f'<div class="nm">{esc(it["nom"])}'
                     + (' <span class="lk" title="lien">↗</span>' if links_of(it.get("lien")) else "")
                     + '</div>'
-                    f'<div class="by">{" · ".join(tags)}</div></div>'
+                    + (f'<div class="by">{" · ".join(tags)}</div>' if tags else "") + '</div>'
                     + (f'<div class="px">{esc(prix)}</div>' if prix else "")
                     + "</div>",
                     unsafe_allow_html=True,
                 )
                 st.button(f"Détails : {it['nom']}", key=f"open_{k}", type="tertiary",
                           on_click=act_open, args=(k,))
-        if ss.open == k:
-            render_details(it, db, user, k)
+        # Votes et commentaires visibles sans déplier.
+        with st.container(key=f"under_{k}"):
+            render_votes(it, db, user, k, names=opened)
+            coms = _coms(iid, db)
+            if opened:
+                render_com_list(coms, k)
+                comment_form(iid, user, k, "Ajouter un commentaire…")
+            elif coms:
+                st.markdown(_coms_html(coms), unsafe_allow_html=True)
+        if opened:
+            render_details(it, k, user)
 
 
-def vote_counts(it, db):
-    vs = [v for v in db.get("votes", []) if v["idee_id"] == it["id"]]
-    return sum(v["vote"] == "+1" for v in vs), sum(v["vote"] == "-1" for v in vs)
-
-
-def render_votes(it, db, user, k):
+def render_votes(it, db, user, k, names=False):
     iid = it["id"]
     vs = [v for v in db.get("votes", []) if v["idee_id"] == iid]
     mine = next((v["vote"] for v in vs if v["personne"] == user), "")
@@ -1214,33 +1242,18 @@ def render_votes(it, db, user, k):
             who.append("♥ " + ", ".join(ups))
         if downs:
             who.append("👎 " + ", ".join(downs))
-        if who:
+        if names and who:
             st.markdown(f'<div class="vwho">{esc(" · ".join(who))}</div>', unsafe_allow_html=True)
 
 
-def render_details(it, db, user, k):
+def render_details(it, k, user):
     iid = it["id"]
     with st.container(key=f"det_{k}"):
+        st.markdown(f'<div class="addby">ajouté par {esc(it["suggere_par"])}</div>',
+                    unsafe_allow_html=True)
         links = links_html(it.get("lien", ""))
         if links:
             st.markdown(f'<div class="lnks">{links}</div>', unsafe_allow_html=True)
-        render_votes(it, db, user, k)
-        st.markdown('<div class="lbl">Commentaires</div>', unsafe_allow_html=True)
-        coms = sorted((c for c in db["commentaires"] if c["idee_id"] == iid),
-                      key=lambda c: c.get("cree_le", ""))
-        for c in coms:
-            with st.container(horizontal=True, wrap=False, gap="small", key=f"crow_{c['id']}_{k}"):
-                st.markdown(f'<div class="com"><span class="au">{esc(c["auteur"])} :</span> '
-                            f'{esc(c["texte"])}</div>', unsafe_allow_html=True)
-                st.button("Supprimer le commentaire", key=f"delc_{c['id']}_{k}", type="tertiary",
-                          icon=":material/close:", on_click=act_del_comment, args=(c["id"],))
-        with st.form(f"cf_{k}", clear_on_submit=True, border=False):
-            with st.container(horizontal=True, wrap=False, gap="small", key=f"cbar_{k}",
-                              vertical_alignment="center"):
-                st.text_input("Commentaire", key=f"ct_{k}", placeholder="Ajouter un commentaire…",
-                              label_visibility="collapsed")
-                st.form_submit_button("Envoyer", type="tertiary",
-                                      on_click=act_add_comment, args=(iid, user, f"ct_{k}"))
         with st.container(horizontal=True, gap="medium", key=f"acts_{k}"):
             if st.button("Modifier", key=f"edit_{k}", type="tertiary"):
                 dlg_edit(iid, user)

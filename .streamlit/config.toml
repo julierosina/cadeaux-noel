@@ -11,12 +11,12 @@ runOnSave = false
 enableStaticServing = true  # serves ./static (illustrations) at app/static/
 
 [theme]
-base = "light"  # light only, even when the phone is in dark mode
-font = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+base = "dark"  # thème « sapin » : fond vert, texte crème (les cartes crème sont gérées dans app.py)
+font = "'Courier Prime', 'Courier New', monospace"
 baseRadius = "medium"
 showWidgetBorder = false
-primaryColor = "#A8372A"
-backgroundColor = "#FBF7F0"
-secondaryBackgroundColor = "#F4EDE3"
-textColor = "#2A2421"
-borderColor = "#E8DFD2"
+primaryColor = "#E8806B"
+backgroundColor = "#24392C"
+secondaryBackgroundColor = "#2F4A38"
+textColor = "#F3E6CF"
+borderColor = "#3E5E48"

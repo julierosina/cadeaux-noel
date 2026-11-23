@@ -10,7 +10,7 @@ Google Sheet accessed through a Google Cloud service account.
 app.py                         the app
 init_sheet.py                  creates the tabs/headers and adds the family names
 requirements.txt
-.streamlit/config.toml         theme (light only), hides chrome
+.streamlit/config.toml         theme ("sapin": dark green), hides chrome
 static/motifs/                 illustrations (used with permission), served by Streamlit
 .streamlit/secrets.toml.example
 ```
@@ -24,14 +24,15 @@ static/motifs/                 illustrations (used with permission), served by S
   old links.
 - `?user=Name` in the URL remembers who you are; bookmark it or add it to the
   iPhone home screen (Safari → Share → *Add to Home Screen*).
-- The home page starts with a bar of names that stays at the top while you
-  scroll; tap a name to jump to that person.
+- The home page starts with a row of coloured stars, one per person; tap a
+  star to jump to that person.
 - "Mes souhaits": your own wishlist, which everyone else sees in your tile.
   Others can copy a wish into their private idea list ("+ idée") to track the
   purchase without you knowing.
-- Then one tile per other family member (two per row on a computer, one per
-  row on a phone), people with the fewest ideas first (order fixed when you
-  open the app). Each tile shows their wishes, the ideas list, an
+- Then one row per other family member (on a computer: my wishes on the left,
+  the family on the right), people with the fewest ideas first (order fixed
+  when you open the app). Small dashes show the ideas (coral = to buy, cream =
+  bought). Tap a row to open it: their wishes, the ideas list, an
   "Ajouter une idée" link and a shared notepad that saves when you leave the field.
 - An idea can be for several people at once (a joint gift, e.g. a couple): it
   shows in each of their tiles and stays hidden from all of them. In the sheet,

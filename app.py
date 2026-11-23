@@ -41,7 +41,7 @@ HEADERS = {
     "souhaits": ["id", "personne", "nom", "prix", "lien", "cree_le"],
     "votes": ["idee_id", "personne", "vote", "modifie_le"],  # vote : "+1" (♥) ou "-1"
 }
-TITRE = "Cadeaux Noël 2026"
+TITRE = "Cadeaux de Noël 2026"
 UNDO_SECONDS = 12
 
 
@@ -497,6 +497,12 @@ def act_open(okey):
     ss.open = None if ss.open == okey else okey
 
 
+def act_person(dest):
+    """Ouvre ou referme la ligne d'une personne."""
+    ouverts = ss.setdefault("ouverts", set())
+    ouverts.symmetric_difference_update({dest})
+
+
 def act_add_comment(iid, user, key):
     texte = (ss.get(key) or "").strip()
     if texte and "db" in ss:
@@ -596,6 +602,7 @@ def act_del_comment(cid):
 # --------------------------------------------------------------------------- #
 CSS = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Homemade+Apple&family=Josefin+Sans:wght@600;700&family=Courier+Prime:wght@400;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,500..700,100&display=swap');
 :root { --accent:#a8372a; --paper:#fffdf9; color-scheme: light; }
 :root { --bg:#fbf7f0; }
@@ -776,6 +783,89 @@ a.lnk { display: inline-block; min-height: 32px; line-height: 32px; color: var(-
 
 /* Dialogues : champs en 16px pour éviter le zoom de Safari iOS */
 [role="dialog"] input, [data-testid="stForm"] input { font-size: 16px; }
+
+/* ===================== Thème « sapin » (Noël 2026) ===================== */
+:root { --bg:#24392C; --cream:#F3E6CF; --card:#F6EBD7; --ink:#2B211B; --caps:#E8C9A0; --onpine:#E8806B; color-scheme: dark; }
+:root { --muted: color-mix(in srgb, currentColor 55%, transparent); --hair: color-mix(in srgb, currentColor 16%, transparent); }
+
+/* Fond vert sapin + étoiles dorées sur les côtés */
+.stApp { background: radial-gradient(120% 70% at 80% 0%, #35553F, #24392C) fixed !important; }
+.stApp::before, .stApp::after { content: ""; position: fixed; pointer-events: none; z-index: 0;
+  background: url("app/static/etoiles_or.png") no-repeat center / contain; }
+.stApp::before { width: 220px; height: 280px; right: -70px; top: -30px; transform: rotate(18deg); }
+.stApp::after { width: 200px; height: 260px; left: -90px; top: 42vh; transform: scaleX(-1) rotate(-12deg); }
+@media (max-width: 700px) {
+  .stApp::before { width: 110px; height: 140px; right: -34px; top: -14px; }
+  .stApp::after { display: none; }
+}
+[data-testid="stMain"] { position: relative; z-index: 1; }
+
+/* Titres et majuscules */
+.ttl, [role="dialog"] h2 { font-family: 'Homemade Apple', cursive !important; font-weight: 400 !important; font-variation-settings: normal; }
+.ttl { font-size: 1.9rem; line-height: 1.6; margin: .25rem 0; }
+@media (min-width: 700px) { .ttl { font-size: 2.5rem; } }
+[role="dialog"] h2 { font-size: 1.4rem !important; }
+.caps, .cap, .lbl { font-family: 'Josefin Sans', sans-serif !important; font-weight: 600; text-transform: uppercase; }
+.caps { font-size: .82rem; letter-spacing: .18em; color: var(--caps); }
+.cap { font-size: .8rem; font-weight: 700; letter-spacing: .18em; }
+.capsub { font-size: .78rem; color: var(--muted); margin: 2px 0 4px; }
+.lbl { font-size: .7rem; letter-spacing: .16em; }
+.st-key-who .me { color: var(--cream); }
+.st-key-switch button p { font-size: .9rem; }
+.st-key-picker button p { font-family: 'Homemade Apple', cursive; font-size: 1.2rem; line-height: 2; }
+.anchor { scroll-margin-top: 24px; }
+
+/* Rangée d'étoiles (une par personne) */
+.stars { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding: 6px 2px 4px; }
+.stars::-webkit-scrollbar { display: none; }
+.stars a { flex: 0 0 auto; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: inherit !important; text-decoration: none; }
+.stars .st { width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; clip-path: polygon(50% 0%,59.1% 31.1%,89.1% 18.8%,70.5% 45.3%,98.7% 61.1%,66.4% 63.1%,71.7% 95%,50% 71%,28.3% 95%,33.6% 63.1%,1.3% 61.1%,29.5% 45.3%,10.9% 18.8%,40.9% 31.1%); }
+.stars .st img { width: 30px; height: auto; }
+.stars .nm { font-family: 'Homemade Apple', cursive; font-size: 12px; line-height: 2; }
+@media (min-width: 700px) { .stars { gap: 14px; } .stars a { width: 92px; } .stars .st { width: 84px; height: 84px; }
+  .stars .st img { width: 36px; } .stars .nm { font-size: 13px; } }
+
+/* Cartes crème : mes souhaits + personne dépliée */
+.st-key-mine, [class*="st-key-pcard_"] { background: var(--card); color: var(--ink); border: none; border-radius: 4px;
+  box-shadow: none; gap: 0 !important; }
+.st-key-mine { padding: 16px 16px 10px; }
+.st-key-mine::before { content: none; }
+.st-key-mine input, .st-key-mine textarea, [class*="st-key-pcard_"] input, [class*="st-key-pcard_"] textarea {
+  color: var(--ink) !important; -webkit-text-fill-color: var(--ink); caret-color: var(--ink); }
+.st-key-mine input::placeholder, [class*="st-key-pcard_"] input::placeholder { color: #8a7c6e; -webkit-text-fill-color: #8a7c6e; }
+.st-key-add_wish button p, [class*="st-key-add_"] button p { font-weight: 700; }
+
+/* Une ligne par personne, qui se déplie */
+[class*="st-key-tile_"] { background: transparent; border: none; border-top: 1.5px solid rgba(243,230,207,.5);
+  border-radius: 0; padding: 4px 0 10px; }
+[class*="st-key-phead_"] { position: relative; }
+[class*="st-key-ptog_"] { position: absolute !important; inset: 0; width: auto !important; height: auto !important; z-index: 2; margin: 0; }
+[class*="st-key-ptog_"] button, [class*="st-key-ptog_"] .stButton { width: 100%; height: 100%; opacity: 0; }
+.ph { display: flex; align-items: center; gap: 10px; min-height: 52px; }
+.ph .pst { width: 20px; height: 20px; flex: none; clip-path: polygon(50% 0%,59.1% 31.1%,89.1% 18.8%,70.5% 45.3%,98.7% 61.1%,66.4% 63.1%,71.7% 95%,50% 71%,28.3% 95%,33.6% 63.1%,1.3% 61.1%,29.5% 45.3%,10.9% 18.8%,40.9% 31.1%); }
+.ph .pn { flex: 1 1 auto; font-family: 'Homemade Apple', cursive; font-size: 1.15rem; line-height: 1.9; min-width: 0; overflow-wrap: anywhere; }
+.ph .dash { display: flex; gap: 3px; }
+.ph .dash i { width: 16px; height: 5px; border-radius: 2px; background: var(--onpine); }
+.ph .dash i.b { background: var(--cream); }
+.ph .chev { width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translate(-2px,-2px); margin: 0 6px 0 4px; flex: none; }
+.ph .chev.up { transform: rotate(-135deg) translate(-2px,-2px); }
+[class*="st-key-pcard_"] { padding: 10px 14px 14px; margin-top: 4px; }
+[class*="st-key-note_"] [data-testid="stTextAreaRootElement"] { background: #EFE2CA !important; border-radius: 4px !important; }
+
+/* Lignes (souhaits, idées) en pointillés, texte machine à écrire */
+[class*="st-key-wrow_"], [class*="st-key-it_"] { border-bottom: 1px dashed #D6C6AA; }
+[class*="st-key-it_"][class*="_prv"] { background: #E6EAD6; border-radius: 4px; border-bottom: none; }
+.wcoms { border-left-color: #DCC9AE; }
+[class*="st-key-tog_"] button { color: #2F5B3A !important; }
+.row .nm { font-size: 1rem; font-weight: 700; }
+.row .px { color: inherit; }
+.row.done .nm { text-decoration: line-through; }
+.row .sec { font-weight: 700; }
+[class*="st-key-vup_"] button, [class*="st-key-vdn_"] button { border-color: #D6C6AA !important; color: #7A6B5E !important; }
+[class*="st-key-det_"] [data-testid="stTextInputRootElement"],
+[class*="st-key-under_"] [data-testid="stTextInputRootElement"] { border-bottom: 1px dashed #CDBB9C !important; }
 </style>
 """
 
@@ -859,6 +949,9 @@ def sort_key(it):
 MOTIFS_TUILES = ["maison", "chaussettes", "tasse_pomme", "clementine", "couronne_bougies",
                  "boule_neige", "bonnet", "branche_orange", "confiture", "tarte", "bonhomme_neige",
                  "maison_pain_epice", "tasse_the", "pomme"]
+# Couleur de l'étoile de chaque personne (même ordre que la feuille « personnes »).
+COULEURS = ["#6F8FD0", "#E9B24C", "#E8806B", "#B48AD0", "#7FB08A", "#E0604B", "#8FC3C9", "#D9A45B"]
+ROTATIONS = ["-8deg", "6deg", "-3deg", "10deg", "-5deg", "4deg"]
 
 
 def motif(name, cls=""):
@@ -984,16 +1077,15 @@ def anchor(name, people):
 
 
 def page_home(user, people, db):
-    deco = "".join(motif(m) for m in ("branche_orange", "bonhomme", "houx", "bougie_rouge", "paquet"))
-    st.markdown(f'<div id="haut"></div><div class="deco">{deco}</div>', unsafe_allow_html=True)
+    st.markdown('<div id="haut"></div>', unsafe_allow_html=True)
     title(TITRE)
     with st.container(gap=None, key="who"):
-        st.markdown(f'<div class="sub">Vous êtes <b class="me">{esc(user)}</b></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="caps">Je suis <b class="me">{esc(user)}</b></div>', unsafe_allow_html=True)
         st.button("Changer de personne", key="switch", type="tertiary", on_click=go)
 
     others = [p for p in people if p != user]
-    # Ordre des tuiles : d'abord ceux qui ont le moins d'idées. Figé pour la session
-    # pour qu'une tuile ne saute pas ailleurs pendant qu'on y ajoute quelque chose.
+    # Ordre : d'abord ceux qui ont le moins d'idées. Figé pour la session
+    # pour qu'une ligne ne saute pas ailleurs pendant qu'on y ajoute quelque chose.
     order_key = (user, tuple(others))
     if ss.get("order_key") != order_key:
         counts = Counter(d for i in db["idees"] if visible(i, user) for d in dests(i))
@@ -1001,17 +1093,23 @@ def page_home(user, people, db):
         ss.order_key = order_key
     order = ss.order
 
-    links = ['<a href="#moi">Mes souhaits</a>'] + [
-        f'<a href="#{anchor(p, people)}">{esc(p)}</a>' for p in order]
-    with st.container(key="jump"):
-        st.markdown(f'<nav class="jump">{"".join(links)}</nav>', unsafe_allow_html=True)
+    # Une étoile par personne ; toucher une étoile fait défiler jusqu'à sa ligne.
+    stars = [f'<a href="#moi"><span class="st" style="background:#E9AFB5">{motif("paquet")}</span>'
+             f'<span class="nm">moi</span></a>']
+    for k, p in enumerate(order):
+        i = people.index(p)
+        stars.append(f'<a href="#{anchor(p, people)}"><span class="st" style="background:{COULEURS[i % len(COULEURS)]};'
+                     f'transform:rotate({ROTATIONS[k % len(ROTATIONS)]})">{motif(MOTIFS_TUILES[i % len(MOTIFS_TUILES)])}</span>'
+                     f'<span class="nm">{esc(p.lower())}</span></a>')
+    st.markdown(f'<nav class="stars">{"".join(stars)}</nav>', unsafe_allow_html=True)
 
-    render_my_wishes(user, db)
-    for r in range(0, len(order), 2):
-        cols = st.columns(2, gap="medium")
-        for c, dest in zip(cols, order[r:r + 2]):
-            with c:
-                render_tile(people.index(dest), dest, db, user, anchor(dest, people))
+    # Ordinateur : mes souhaits à gauche, la famille à droite. Téléphone : l'un sous l'autre.
+    left, right = st.columns([1, 2], gap="large")
+    with left:
+        render_my_wishes(user, db)
+    with right:
+        for dest in order:
+            render_tile(people.index(dest), dest, db, user, anchor(dest, people))
 
     st.markdown('<div class="credits">Ce mini-site a été fait par Julie. '
                 'Les illustrations sont de Och Monika.</div>', unsafe_allow_html=True)
@@ -1104,8 +1202,8 @@ def render_my_wishes(user, db):
     mine = sorted((w for w in db.get("souhaits", []) if w["personne"] == user),
                   key=lambda w: w.get("cree_le", ""))
     with st.container(key="mine"):
-        st.markdown(f'<div id="moi" class="anchor"></div><div class="th"><span class="tl">{motif("paquet", "tm")}<span class="tn">Mes souhaits</span></span>'
-                    '<span class="tc">visibles par la famille</span></div>', unsafe_allow_html=True)
+        st.markdown('<div id="moi" class="anchor"></div><div class="cap">Mes souhaits</div>'
+                    '<div class="capsub">visibles par la famille</div>', unsafe_allow_html=True)
         for w in mine:
             with st.container(horizontal=True, wrap=False, gap="small", vertical_alignment="center",
                               key=f"wrow_{w['id']}"):
@@ -1124,39 +1222,47 @@ def render_tile(i, dest, db, user, anchor_id):
     items = sorted((it for it in db["idees"] if dest in dests(it) and visible(it, user)), key=sort_key)
     wishes = sorted((w for w in db.get("souhaits", []) if w["personne"] == dest),
                     key=lambda w: w.get("cree_le", ""))
-    n_bought = sum(it["statut"] == ACHETE for it in items)
-    summary = _plural(len(items), "idée") if items else "aucune idée"
-    if n_bought:
-        summary += " · " + _plural(n_bought, "acheté")
+    ouvert = dest in ss.setdefault("ouverts", set())
+    # Petits traits : un par idée (corail = à acheter, crème = acheté). Rien s'il n'y a pas d'idée.
+    dashes = "".join(f'<i class="{"b" if it["statut"] == ACHETE else ""}"></i>' for it in items)
     with st.container(key=f"tile_{i}"):
-        st.markdown(f'<div id="{anchor_id}" class="anchor"></div>'
-                    f'<div class="th"><span class="tl">{motif(MOTIFS_TUILES[i % len(MOTIFS_TUILES)], "tm")}'
-                    f'<span class="tn">{esc(dest)}</span></span>'
-                    f'<span class="tc">{summary}</span></div>', unsafe_allow_html=True)
-        if wishes:
-            st.markdown('<div class="lbl" style="margin:4px 0 2px">Ses souhaits</div>',
-                        unsafe_allow_html=True)
-            taken = {it["nom"].casefold() for it in items} | {u for it in items for u in links_of(it.get("lien"))}
-            for w in wishes:
-                with st.container(horizontal=True, wrap=False, gap="small", vertical_alignment="center",
-                                  key=f"wrow_{w['id']}"):
-                    already = w["nom"].casefold() in taken or any(u in taken for u in links_of(w.get("lien")))
-                    wish_body(w, db, f"w_{w['id']}_t{i}")
-                    if already:
-                        st.markdown('<div class="wdone">dans les idées</div>', unsafe_allow_html=True)
-                    else:
-                        st.button("idée", key=f"w2i_{w['id']}", type="tertiary", icon=":material/add:",
-                                  help="Ajouter aux idées (pour suivre l'achat)",
-                                  on_click=act_wish_to_idea, args=(w["id"], user))
-                if ss.open == f"w_{w['id']}_t{i}":
-                    render_wish_comments(w, db, user, f"w_{w['id']}_t{i}")
-            st.markdown('<div class="lbl" style="margin:12px 0 2px">Idées</div>', unsafe_allow_html=True)
-        with st.container(key=f"liste_{i}"):
-            for it in items:
-                render_item(it, db, user, i, dest)
-        if st.button("Ajouter une idée", key=f"add_{i}", type="tertiary", icon=":material/add:"):
-            dlg_add(dest, user)
-        render_note(i, dest, db, user)
+        with st.container(key=f"phead_{i}"):
+            st.markdown(f'<div id="{anchor_id}" class="anchor"></div><div class="ph">'
+                        f'<span class="pst" style="background:{COULEURS[i % len(COULEURS)]}"></span>'
+                        f'<span class="pn">{esc(dest)}</span><span class="dash">{dashes}</span>'
+                        f'<span class="chev{" up" if ouvert else ""}"></span></div>', unsafe_allow_html=True)
+            st.button(f"Ouvrir : {dest}", key=f"ptog_{i}", type="tertiary", on_click=act_person, args=(dest,))
+        if not ouvert:
+            return
+        with st.container(key=f"pcard_{i}"):
+            render_tile_body(i, dest, db, user, items, wishes)
+
+
+def render_tile_body(i, dest, db, user, items, wishes):
+    if wishes:
+        st.markdown('<div class="lbl" style="margin:4px 0 2px">Ses souhaits</div>',
+                    unsafe_allow_html=True)
+        taken = {it["nom"].casefold() for it in items} | {u for it in items for u in links_of(it.get("lien"))}
+        for w in wishes:
+            with st.container(horizontal=True, wrap=False, gap="small", vertical_alignment="center",
+                              key=f"wrow_{w['id']}"):
+                already = w["nom"].casefold() in taken or any(u in taken for u in links_of(w.get("lien")))
+                wish_body(w, db, f"w_{w['id']}_t{i}")
+                if already:
+                    st.markdown('<div class="wdone">dans les idées</div>', unsafe_allow_html=True)
+                else:
+                    st.button("idée", key=f"w2i_{w['id']}", type="tertiary", icon=":material/add:",
+                              help="Ajouter aux idées (pour suivre l'achat)",
+                              on_click=act_wish_to_idea, args=(w["id"], user))
+            if ss.open == f"w_{w['id']}_t{i}":
+                render_wish_comments(w, db, user, f"w_{w['id']}_t{i}")
+        st.markdown('<div class="lbl" style="margin:12px 0 2px">Idées</div>', unsafe_allow_html=True)
+    with st.container(key=f"liste_{i}"):
+        for it in items:
+            render_item(it, db, user, i, dest)
+    if st.button("Ajouter une idée", key=f"add_{i}", type="tertiary", icon=":material/add:"):
+        dlg_add(dest, user)
+    render_note(i, dest, db, user)
 
 
 def render_note(i, dest, db, user):

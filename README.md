@@ -110,9 +110,13 @@ modifie_le`), writes the headers, and adds any names not
 already present. It is safe to run again. You can also do it by hand: create the six tabs with
 exactly those headers in row 1 and type the names under `nom`.
 
-To rename someone or add a person later, edit the `personnes` tab directly
-(the app picks it up within ~25 s). Renaming does not rename existing ideas:
-also update `destinataire`/`suggere_par`/`auteur` if needed.
+To add a person later, add their name to the `personnes` tab (the app picks it
+up within ~25 s). To rename someone everywhere (ideas, joint gifts, wishes,
+comments, notes, votes):
+```bash
+python rename_person.py "Old" "New"            # shows what would change
+python rename_person.py "Old" "New" --apply
+```
 
 Run it locally:
 ```bash
